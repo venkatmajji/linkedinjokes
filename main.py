@@ -13,7 +13,7 @@ scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/au
 service_account_json = os.getenv("SERVICE_ACCOUNT_JSON")
 if not service_account_json:
     raise Exception("SERVICE_ACCOUNT_JSON not found in environment.")
-creds = ServiceAccountCredentials.from_json_keyfile_dict(json.loads(service_account_json), scope)
+creds = ServiceAccountCredentials.from_json_keyfile_dict(json.loads(SERVICE_ACCOUNT_JSON), scope)
 client = gspread.authorize(creds)
 
 # --- 2. Joke Rotation Logic ---
