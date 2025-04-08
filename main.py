@@ -57,11 +57,12 @@ headers = {
 }
 
 # === 5. Get LinkedIn profile ID ===
-profile_res = requests.get("https://api.linkedin.com/v2/me", headers=headers)
+profile_res = requests.get("https://api.linkedin.com/v2/userinfo", headers=headers)
 if profile_res.status_code != 200:
     raise Exception(f"❌ Failed to get LinkedIn profile: {profile_res.text}")
 
-profile_id = profile_res.json()["id"]
+profile_id = profile_res.json()["sub"]
+
 
 # === 6. Optional: Generate doodle with OpenAI ===
 image_url = None
