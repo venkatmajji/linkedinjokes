@@ -5,19 +5,23 @@ import gspread
 import requests
 from oauth2client.service_account import ServiceAccountCredentials
 
-# === 0. DEBUG: Verify service account JSON is properly loaded ===
-print("🔍 Checking SERVICE_ACCOUNT_JSON...")
+# === 0. DEBUG: Verify SERVICE_ACCOUNT_JSON from Azure Key Vault ===
+print("🔍 Attempting to load SERVICE_ACCOUNT_JSON...")
+
 service_account_json = os.getenv("SERVICE_ACCOUNT_JSON")
 
 if not service_account_json:
-    raise Exception("❌ SERVICE_ACCOUNT_JSON not found in environment.")
+    raise Exception("❌ SERVICE_ACCOUNT_JSON is not loaded at all. Check Azure Key Vault reference or app settings.")
+
+print("✅ ENV loaded! Length:", len(service_account_json))
+print("🧪 First 200 characters:\n", service_account_json[:200])
 
 try:
     credentials_dict = json.loads(service_account_json)
-    print("✅ SERVICE_ACCOUNT_JSON successfully parsed!")
+    print("✅ JSON parsed successfully!")
     print("🔐 Service Account Email:", credentials_dict.get("client_email"))
 except json.JSONDecodeError as e:
-    raise Exception("❌ Failed to decode SERVICE_ACCOUNT_JSON. Check if \\n are escaped correctly.") from e
+    raise Exception("❌ Failed to decode SERVICE_ACCOUNT_JSON. Check for proper \\n escaping.") from e
 
 # === 1. Authenticate with Google Sheets ===
 scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
@@ -31,7 +35,7 @@ styles = ["Corporate Wit", "Playful Nerd", "Dad-Joke"]
 last_posted = next((row["Style"] for row in reversed(rows) if str(row["Posted?"]).upper() == "TRUE"), None)
 next_style = styles[(styles.index(last_posted) + 1) % len(styles)] if last_posted else styles[0]
 
-# === 3. Select next joke ===
+# === 3. Select the next joke ===
 joke_row = next((r for r in rows if r["Style"] == next_style and str(r["Posted?"]).upper() != "TRUE"), None)
 if not joke_row:
     print(f"❌ No unposted jokes found for style: {next_style}")
@@ -59,7 +63,7 @@ if profile_res.status_code != 200:
 
 profile_id = profile_res.json()["id"]
 
-# === 6. Optional: Generate Doodle with OpenAI ===
+# === 6. Optional: Generate doodle with OpenAI ===
 image_url = None
 openai_key = os.getenv("OPENAI_API_KEY")
 if openai_key:
@@ -74,7 +78,7 @@ if openai_key:
     except Exception as e:
         print(f"⚠️ Doodle generation failed: {e}")
 
-# === 7. Prepare LinkedIn post ===
+# === 7. Post to LinkedIn ===
 if image_url:
     print("📤 Uploading image to LinkedIn...")
     reg = requests.post("https://api.linkedin.com/v2/assets?action=registerUpload", headers=headers, json={
@@ -105,7 +109,7 @@ if image_url:
         "visibility": {"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"}
     }
 else:
-    print("📎 Posting text-only joke to LinkedIn...")
+    print("📝 Posting text-only joke to LinkedIn...")
     post_payload = {
         "author": f"urn:li:person:{profile_id}",
         "lifecycleState": "PUBLISHED",
@@ -118,7 +122,7 @@ else:
         "visibility": {"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"}
     }
 
-# === 8. Post to LinkedIn ===
+# === 8. Make the post ===
 post_res = requests.post("https://api.linkedin.com/v2/ugcPosts", headers=headers, json=post_payload)
 
 if post_res.status_code == 201:
